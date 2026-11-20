@@ -1,0 +1,46 @@
+- name: Konfiguracja maszyny produkcyjnej K3s i srodowiska CI/CD
+  hosts: prod
+  become: true
+  tasks:
+    - name: Instalacja niezbednych pakietow systemowych
+      ansible.builtin.apt:
+        name:
+          - curl
+          - git
+          - jq
+          - ca-certificates
+          - iptables
+        state: present
+        update_cache: true
+
+    - name: UpeWnienie sie, ze usluga Docker jest uruchomiona
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Upewnienie sie, ze usluga K3s jest uruchomiona
+      ansible.builtin.systemd:
+        name: k3s
+        state: started
+        enabled: true
+
+    - name: Blokada ruchu do portu 30080 na interfejsie NAT (PREROUTING)
+      ansible.builtin.iptables:
+        table: raw
+        chain: PREROUTING
+        destination: 10.0.2.15
+        protocol: tcp
+        destination_port: "30080"
+        jump: DROP
+        state: present
+
+    - name: Blokada ruchu do portu 30080 na interfejsie NAT (OUTPUT)
+      ansible.builtin.iptables:
+        table: raw
+        chain: OUTPUT
+        destination: 10.0.2.15
+        protocol: tcp
+        destination_port: "30080"
+        jump: DROP
+        state: present
