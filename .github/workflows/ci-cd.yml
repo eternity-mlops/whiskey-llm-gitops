@@ -19,21 +19,22 @@ jobs:
       - name: Pobranie kodu
         uses: actions/checkout@v4
 
-      - name: Konfiguracja Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Instalacja zaleznosci testowych
-        run: pip install -r requirements-dev.txt
+      - name: Konfiguracja srodowiska Python i instalacja zaleznosci
+        run: |
+          python3 -m venv .venv
+          . .venv/bin/activate
+          pip install -r requirements-dev.txt
 
       - name: Sprawdzenie stylu i formatowania (ruff)
         run: |
+          . .venv/bin/activate
           ruff check
           ruff format --check
 
       - name: Testy z pomiarem pokrycia (pytest)
-        run: pytest --cov app --cov-report term-missing
+        run: |
+          . .venv/bin/activate
+          pytest --cov app --cov-report term-missing
 
       - name: Sprawdzenie Dockerfile (hadolint)
         uses: hadolint/hadolint-action@v3.1.0
