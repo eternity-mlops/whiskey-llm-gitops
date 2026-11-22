@@ -12,7 +12,7 @@ permissions:
 jobs:
   lint-and-test:
     name: Lint, Tests, Hadolint & Kubeconform
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read
     steps:
@@ -33,7 +33,7 @@ jobs:
           ruff format --check
 
       - name: Testy z pomiarem pokrycia (pytest)
-        run: pytest testy --cov aplikacja --cov-report term-missing
+        run: pytest --cov app --cov-report term-missing
 
       - name: Sprawdzenie Dockerfile (hadolint)
         uses: hadolint/hadolint-action@v3.1.0
@@ -49,7 +49,7 @@ jobs:
     name: Build & Push Image to GHCR
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: lint-and-test
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read
       packages: write
