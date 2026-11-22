@@ -36,7 +36,7 @@ jobs:
       - name: Testy z pomiarem pokrycia (pytest)
         run: |
           . .venv/bin/activate
-          pytest --cov app --cov-report term-missing
+          python -m pytest --cov app --cov-report term-missing
 
       - name: Sprawdzenie Dockerfile (hadolint)
         uses: hadolint/hadolint-action@v3.1.0
