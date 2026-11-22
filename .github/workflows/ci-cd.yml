@@ -21,8 +21,10 @@ jobs:
 
       - name: Konfiguracja srodowiska Python i instalacja zaleznosci
         run: |
-          python3 -m venv .venv
+          rm -rf .venv
+          python3 -m venv --without-pip .venv
           . .venv/bin/activate
+          curl -fsSL https://bootstrap.pypa.io/get-pip.py | python
           pip install -r requirements-dev.txt
 
       - name: Sprawdzenie stylu i formatowania (ruff)
