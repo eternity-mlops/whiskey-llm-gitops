@@ -1,0 +1,93 @@
+name: CI/CD Pipeline
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    name: Lint, Tests, Hadolint & Kubeconform
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Pobranie kodu
+        uses: actions/checkout@v4
+      - name: Konfiguracja Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Instalacja zaleznosci testowych
+        run: pip install -r requirements-dev.txt
+      - name: Sprawdzenie stylu i formatowania (ruff)
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Testy z pomiarem pokrycia (pytest)
+        run: pytest --cov=app --cov-report=term-missing
+      - name: Sprawdzenie Dockerfile (hadolint)
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+      - name: Walidacja manifestow Kubernetes (kubeconform)
+        run: |
+          curl -fsSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
+          ./kubeconform -strict -summary k8s/
+
+  build-and-push:
+    name: Build & Push Image to GHCR
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Pobranie kodu
+        uses: actions/checkout@v4
+      - name: Logowanie do GitHub Container Registry (ghcr.io)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Budowanie i wypychanie obrazu z tagiem github.sha
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/whiskey-llm:${{ github.sha }}
+
+  deploy:
+    name: Deploy to K3s Prod
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build-and-push
+    runs-on: self-hosted
+    permissions:
+      contents: read
+    env:
+      KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      IMAE_TAG: ghcr.io/${{ github.repository_owner }}/whiskey-llm:${{ github.sha }}
+    steps:
+      - name: Pobranie kodu
+        uses: actions/checkout@v4
+      - name: Podmiana tagu obrazu w manifestie na github.sha
+        run: |
+          sed -i "s|image: ghcr.io/.*/whiskey-llm:.*|.*|image: ghcr.io/${{ github.repository_owner }}/whiskey-llm:${{ github.sha }}|g" k8s/deployment.yaml
+          grep "image:" k8s/deployment.yaml
+      - name: Zastosowanie manifestow K8s i oczekiwanie na wdrozenie
+        id: rollout
+        continue-on-error: true
+        run: |
+          kubectl apply -f k8s/
+          kubectl rollout status deployment/llm --timeout=180s
+      - name: Automatyczne wycofanie w przypadku bledu (rollout undo)
+        if: steps.rollout.outcome != 'success'
+        run: |
+          echo "Wdrozenie nie powiodlo sie - wycofywanie do poprzedniej wersji..."
+          kubectl rollout undo deployment/llm
+          kubectl rollout status deployment/llm --timeout=120s
+          exit 1
