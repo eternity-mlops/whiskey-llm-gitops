@@ -10,24 +10,23 @@ permissions:
 jobs:
   lint-and-test:
     name: Lint, Tests, Hadolint & Kubeconform
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read
     steps:
       - name: Pobranie kodu
-        uses: actions/checkout@v4
-      - name: Konfiguracja Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Instalacja zaleznosci testowych
-        run: pip install -r requirements-dev.txt
+        uses: actions/checkout@¾4
+      - name: Instalacja zaleznosci testowych w venv
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -r requirements-dev.txt
       - name: Sprawdzenie stylu i formatowania (ruff)
         run: |
-          ruff check .
-          ruff format --check .
-      - name: Testy z pomiarem pokrycia (pytest)
-        run: pytest --cov=app --cov-report=term-missing
+          .venv/bin/ruff check .
+          .venv/bin/ruff format --check .
+      - name: Testy Z pomiarem pokrycia (pytest)
+        run: .venv/bin/pytest --cov=app --cov-report=term-missing
       - name: Sprawdzenie Dockerfile (hadolint)
         uses: hadolint/hadolint-action@v3.1.0
         with:
@@ -41,7 +40,7 @@ jobs:
     name: Build & Push Image to GHCR
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: lint-and-test
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read
       packages: write
