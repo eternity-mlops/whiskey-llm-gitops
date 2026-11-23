@@ -15,7 +15,7 @@ jobs:
       contents: read
     steps:
       - name: Pobranie kodu
-        uses: actions/checkout@¾4
+        uses: actions/checkout@v4¾4
       - name: Instalacja zaleznosci testowych w venv
         run: |
           python3 -m venv .venv
