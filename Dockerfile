@@ -1,8 +1,8 @@
-# hadolint ignore=DL3008
 FROM debian:bookworm-slim AS builder
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
