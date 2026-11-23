@@ -12,7 +12,7 @@ WORKDIR /build
 
 RUN curl -fsSL -o model.llamafile \
     https://huggingface.co/Mozilla/TinyLlama-1.1B-Chat-v1.0-llamafile/resolve/main/TinyLlama-1.1B-Chat-v1.0.Q4_K_M.llamafile \
-    && echo "a3f5a14c6e945c22881b2da5f385c7bb13c7a0d421d33190df09bfa0efab5dd5  model.llamafile" | sha256sum -c - \
+    && echo "29eca81f9f3a639029aa1f35cb1f28a9411aafbc54f12b920ca904177177a965  model.llamafile" | sha256sum -c - \
     && chmod 755 model.llamafile
 
 FROM debian:bookworm-slim
